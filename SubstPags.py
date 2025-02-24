@@ -13,40 +13,38 @@ class Frame:
         self.modified = False
         self.last_used_time = time
 
-class AlgorithmClock:
+class AlgorithmOptimal:
     @staticmethod
     def execute(p, m, accesses):
-        frames = []
+        frames = set()
         page_faults = 0
-        pointer = 0
 
-        for access in accesses:
-            page_found = False
-
-            for frame in frames:
-                if frame.page == access.page:
-                    frame.referenced = True  # Referência
-                    page_found = True
-                    break
-
-            if not page_found:
+        for i in range(len(accesses)):
+            current_page = accesses[i].page
+            if current_page not in frames:
+                if len(frames) == m:
+                    page_to_replace = AlgorithmOptimal.find_optimal_page_to_replace(frames, accesses, i)
+                    frames.remove(page_to_replace)
+                frames.add(current_page)
                 page_faults += 1
-
-                if len(frames) < m:
-                    frames.append(Frame(access.page))
-                else:
-                    while True:
-                        frame = frames[pointer]
-                        if not frame.referenced:
-                            frames[pointer] = Frame(access.page)
-                            break
-                        else:
-                            frame.referenced = False  # Reset
-                            pointer = (pointer + 1) % m  # Move
-
-                pointer = (pointer + 1) % m  # Circular
-
         return page_faults
+
+    @staticmethod
+    def find_optimal_page_to_replace(frames, accesses, current_index):
+        future_uses = {}
+        for i in range(current_index + 1, len(accesses)):
+            page = accesses[i].page
+            if page in frames and page not in future_uses:
+                future_uses[page] = i
+
+        farthest = current_index
+        page_to_replace = None
+        for page in frames:
+            use = future_uses.get(page, float('inf'))
+            if use > farthest:
+                farthest = use
+                page_to_replace = page
+        return page_to_replace
 
 class AlgorithmNRU:
     @staticmethod
@@ -97,60 +95,40 @@ class AlgorithmNRU:
             return random.choice(class_2)
         return random.choice(class_3)
 
-    @staticmethod
-    def select_page_to_replace(frames):
-        class_0, class_1, class_2, class_3 = [], [], [], []
-
-        for page, frame in frames.items():
-            if not frame.referenced and not frame.modified:
-                class_0.append(page)
-            elif not frame.referenced:
-                class_1.append(page)
-            elif not frame.modified:
-                class_2.append(page)
-            else:
-                class_3.append(page)
-
-        if class_0:
-            return random.choice(class_0)
-        if class_1:
-            return random.choice(class_1)
-        if class_2:
-            return random.choice(class_2)
-        return random.choice(class_3)
-
-class AlgorithmOptimal:
+class AlgorithmClock:
     @staticmethod
     def execute(p, m, accesses):
-        frames = set()
+        frames = []
         page_faults = 0
+        pointer = 0
 
-        for i in range(len(accesses)):
-            current_page = accesses[i].page
-            if current_page not in frames:
-                if len(frames) == m:
-                    page_to_replace = AlgorithmOptimal.find_optimal_page_to_replace(frames, accesses, i)
-                    frames.remove(page_to_replace)
-                frames.add(current_page)
+        for access in accesses:
+            page_found = False
+
+            for frame in frames:
+                if frame.page == access.page:
+                    frame.referenced = True  # Referência
+                    page_found = True
+                    break
+
+            if not page_found:
                 page_faults += 1
+
+                if len(frames) < m:
+                    frames.append(Frame(access.page))
+                else:
+                    while True:
+                        frame = frames[pointer]
+                        if not frame.referenced:
+                            frames[pointer] = Frame(access.page)
+                            break
+                        else:
+                            frame.referenced = False  # Reset
+                            pointer = (pointer + 1) % m  # Move
+
+                pointer = (pointer + 1) % m  # Circular
+
         return page_faults
-
-    @staticmethod
-    def find_optimal_page_to_replace(frames, accesses, current_index):
-        future_uses = {}
-        for i in range(current_index + 1, len(accesses)):
-            page = accesses[i].page
-            if page in frames and page not in future_uses:
-                future_uses[page] = i
-
-        farthest = current_index
-        page_to_replace = None
-        for page in frames:
-            use = future_uses.get(page, float('inf'))
-            if use > farthest:
-                farthest = use
-                page_to_replace = page
-        return page_to_replace
 
 class AlgorithmWSClock:
     @staticmethod
